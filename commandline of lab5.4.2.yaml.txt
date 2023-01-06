@@ -1,0 +1,1 @@
+aws --no-verify-ssl --profile temp ec2 create-snapshot --volume-id vol-0aece252e4a62e9e5 --description "This is my root volume snapshot"
