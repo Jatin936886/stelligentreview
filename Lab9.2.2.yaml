@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  MyLambda:
+   Type: AWS::Lambda::Function
+   Properties:
+    FunctionName: jatinFunction
+    Runtime: python3.8
+    Handler: index.lambda_handler
+    Code:
+     ZipFile: |
+      import json
+      import boto3
+
+      def lambda_handler(event, context):
+        dynamodb = boto3.resource('dynamodb')
+
+         table = dynamodb.Table('Teacher')
+         id1=event["Name"]
+         name=event["Phonenumber"]
+
+         response=table.put_item(Item={'Name': 'Jatin','Phonenumber': '1111111111'})
+         return response
+         {
+           'statusCode': 200,
+           'body': 'Item Added Successfully'
+         }
+  LambdaRole:
+   Type: AWS::IAM::Role
+   Properties:
+    RoleName: JatinRole
+    AssumeRolePolicyDocument:
+     Statement:
+      - Effect: Allow
+        Principal:
+         Service: lambda.amazonaws.com
+        Action: sts:AssumeRole
+    Path: /
+    Policies:
+     - PolicyName: Policy_api-lambda-db
+       PolicyDocument:
+         Version: 2012-10-17
+         Statement:
+          - Effect: Allow
+            Action:
+             - 'dynamodb:PutItem'
+             - 'dynamodb:BatchGetItem'
+             - 'dynamodb:BatchWriteItem'
+             - 'dynamodb:TagResource'
+             - 'dynamodb:UntagResource'
+             - 'dynamodb:DeleteItem'
+             - 'dynamodb:GetItem'
+             - 'dynamodb:Scan'
+             - 'dynamodb:Query'
+             - 'dynamodb:UpdateItem'
+            Resource: arn:aws:dynamodb:*:*:table/*
+  JatinRestApi:
+   Type: AWS::ApiGateway::RestApi
+   Properties:
+    Name: JatinRestApi
+  ApiMethod:
+   Type: AWS::ApiGateway::Method
+   DependsOn: LambdaPermission
+   Properties:
+    HttpMethod: GET
+    ResourceId: !Ref Resource
+    RestApiId: !Ref JatinRestApi
+    AuthorizationType: NONE
+    MethodResponses:
+     - StatusCode: 200
+    Integration:
+     Type: AWS
+     IntegrationResponses:
+      - StatusCode: 200
+     IntegrationHttpMethod: POST
+     Uri: !Sub >-
+        arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyLambda.Arn}/invocations
+          - LambdaFuncNameArn: !GetAtt MyLambda.Arn
+  Deployment:
+   Type: AWS::ApiGateway::Deployment
+   DependsOn: ApiMethod
+   Properties:
+    RestApiId: !Ref JatinRestApi
+    Description: My deployment
+    StageName: karneediStage
+  Resource:
+   Type: AWS::ApiGateway::Resource
+   Properties:
+    RestApiId: !Ref JatinRestApi
+    ParentId: !GetAtt
+     - JatinRestApi
+     - RootResourceId
+    PathPart: ApiResource1
+  LambdaPermission:
+   Type: AWS::Lambda::Permission
+   Properties:
+    FunctionName: !Ref MyLambda
+    Action: lambda:InvokeFunction
+    Principal: '*'
+  DynamoDBTable:
+   Type: AWS::DynamoDB::Table
+   Properties: 
+    TableName: Teacher
+    AttributeDefinitions:
+     - AttributeName: id
+       AttributeType: S
+    KeySchema:
+     - AttributeName: id
+       KeyType: HASH
+    ProvisionedThroughput:
+     ReadCapacityUnits: '5'
+     WriteCapacityUnits: '5'
+   DependsOn:
+    - LambdaRole
+  ScheduledRule:
+   Type: AWS::Events::Rule
+   Properties:
+    Description: "ScheduledRule"
+    State: "ENABLED"
+    Targets:
+     - Arn: >-
+         arn:aws:events:us-east-1:324320755747:event-bus/TargetFunctionV1
+       Id: "TargetFunctionV1"
