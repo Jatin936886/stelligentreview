@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "EC2 across VPCs"
+Parameters:
+  SsubnetCidr1:
+    Type: String
+    Description: Ip
+    Default: 10.0.0.3/16
+Resources:
+  Vpc2: 
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: !Ref SsubnetCidr1
+      Tags:
+        - Key: User
+          Value: jatin.x
+        - Key: stelligent.jatin
+          Value: '4'
+        - Key: stelligent-u-labs
+          Value: '4.1.2'
+  Subnet12: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.0.2/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: User
+          Value: jatin.x
+        - Key: stelligent.jatin
+          Value: '4'
+        - Key: stelligent-u-labs
+          Value: '4.2.1'
+      VpcId: !Ref Vpc2
+  JatinEc2InstanWindow:
+    Type: AWS::EC2::Instance
+    Properties: 
+      InstanceType: t2.micro
+      ImageId: ami-0910b65723f27f156
+      AvailabilityZone: us-east-1a
+      KeyName: JatinKeyPair
+      Tags:
+        - Key: User
+          Value: Jatin.x
+      SubnetId: !Ref Subnet12
+  JatinEc2InstanUbuntu:
+    Type: AWS::EC2::Instance
+    Properties: 
+      InstanceType: t2.micro
+      ImageId: ami-08c40ec9ead489470
+      AvailabilityZone: us-east-1a
+      KeyName: JatinKeyPair
+      Tags:
+        - Key: User
+          Value: Jatin.x
+      SubnetId: !Ref Subnet12
+  JvtsInstance1:
+    Type: AWS::EC2::LaunchTemplate
+    Properties: 
+      LaunchTemplateData: 
+        InstanceType: !Ref JatinEc2InstanWindow
+        ImageId: ami-0910b65723f27f156
+        InstanceType: !Ref JatinEc2InstanUbuntu
+        ImageId: ami-08c40ec9ead489470
+      LaunchTemplateName: JATIN12

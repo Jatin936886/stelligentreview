@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "VPC Endpoint Gateway to S3"
+Parameters:
+  SsubnetCidr1:
+    Type: String
+    Description: Ip
+    Default: 10.0.0.3/16
+  BucketName:
+    Type: String
+    Default: stelligent-u-jatin.x.labs
+Resources:
+  JatinEgress: 
+    Type: AWS::EC2::EgressOnlyInternetGateway
+    Properties: 
+        VpcId: !Ref Vpc2
+  Vpc2: 
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: !Ref SsubnetCidr1
+      Tags:
+        - Key: User
+          Value: jatin.x
+        - Key: stelligent.jatin
+          Value: '4'
+        - Key: stelligent-u-labs
+          Value: '4.1.2'
+  Subnet12: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.0.2/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: User
+          Value: jatin.x
+        - Key: stelligent.jatin
+          Value: '4'
+        - Key: stelligent-u-labs
+          Value: '4.2.1'
+      VpcId: !Ref Vpc2
+  JatinEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:GetObject'
+            Resource:
+              - Ref BucketName
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcId: !Ref Vpc2
