@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: ""
+Parameters:
+  SsubnetCidr12:
+    Type: String
+    Description: Ip
+    Default: 10.0.0.8/16
+Resources:
+  JatinVpc1:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: !Ref SsubnetCidr12
+      Tags:
+        - Key: User
+          Value: Jatin.x
+        - Key: stelligent.Jatin
+          Value: '4'
+        - Key: stelligent-u-labs
+          Value: '4.1.1'
+  JatinSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.0.2/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: User
+          Value: Jatin.x
+        - Key: stelligent.Jatin
+          Value: '4'
+        - Key: stelligent-u-labs
+          Value: '4.1.1'
+      VpcId: !Ref JatinVpc1
+  JatinEc2InstanUbuntu:
+    Type: AWS::EC2::Instance
+    Properties: 
+      UserData:
+        'Fn::Base64': !Sub
+          - |
+            #!/bin/bash -xe
+            # create mount point directory
+            mkdir /mnt/xvdh
+            # create ext4 filesystem on new volume           
+            mkfs -t ext4 /dev/xvdh
+            # add an entry to fstab to mount volume during boot
+            echo "/dev/xvdh       /mnt/xvdh   ext4    defaults,nofail 0       2" >> /etc/fstab
+            # mount the volume on current boot
+            mount -a
+            # create Simpletextfile on new volume   
+      InstanceType: t2.micro
+      ImageId: ami-08c40ec9ead489470
+      AvailabilityZone: us-east-1a
+      KeyName: Jatin1KeyPair
+      Tags:
+        - Key: User
+          Value: Jatin.x
+      SubnetId: !Ref JatinSubnet1
+  JatinSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group to test ping
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.0.0.0/24
+        - IpProtocol: icmp
+          FromPort: 8
+          ToPort: -1
+          CidrIp: 10.0.0.0/24
+      VpcId: !Ref JatinVpc1
+  JvtsInstance1:
+    Type: AWS::EC2::LaunchTemplate
+    Properties: 
+      LaunchTemplateName: JATIN31201
+      LaunchTemplateData: 
+        InstanceType: !Ref JatinEc2InstanUbuntu
+        ImageId: ami-08c40ec9ead489470
+        IamInstanceProfile:
+          Arn: !GetAtt CWProfile.Arn
+        SecurityGroupIds:
+            - !Ref JatinSecurityGroup
+  SecurityGroupLaunchTemplate:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SeurityGroup to launch template
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: User
+          Value: Jatin.x
+      VpcId: !Ref JatinVpc1        
+  CloudWatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description:  CloudWatch
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Tags:
+        - Key: User
+          Value: Jatin.x  
+  CWProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: CWProfileLinux
+      Roles:
+        - !Ref CloudWatchRole 
+  NewVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      Size: 100
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: MyTag
+          Value: TagValue
+    DeletionPolicy: Snapshot
